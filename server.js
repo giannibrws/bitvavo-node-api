@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const express = require('express')
 const axios = require('axios');
+const { Client, GatewayIntentBits } = require('discord.js');
 
 const ticker = require('./models/tickerModel')
 const utils = require('./utils/utils');
@@ -19,6 +20,69 @@ const bitvavo = require('bitvavo')().options({
     WSURL: 'wss://ws.bitvavo.com/v2/',
     DEBUGGING: false
 })
+
+
+/** DISCORD SECTION */ 
+
+// Create a new Discord client instance
+const client = new Client({
+    intents: [
+		GatewayIntentBits.Guilds,
+		GatewayIntentBits.GuildMessages,
+		GatewayIntentBits.MessageContent,
+		GatewayIntentBits.GuildMembers,
+	],
+});
+
+// Event listener for when the bot is ready
+client.on('ready', (c) => {
+  console.log(` ${c.user.tag} is online!`);
+
+});
+
+// Event listener for when a message is received
+client.on('messageCreate', message => {
+    // console.log(message)
+  // Ignore messages from the bot itself
+  if (message.author.bot) return;
+
+  // Check if the message starts with the prefix '!'
+  if (message.content.startsWith('!nexus')) {
+    // Send a reply to the message author
+    message.reply('We zijn dr');
+
+    if (message.content.startsWith('!nexus')) {
+        let msg = message.content
+    }
+  }
+});
+
+// Event listener for when a message is received
+client.on('interactionCreate', async (interaction) => {
+  // Ignore messages from the bot itself
+  if (interaction.isCommand()) {
+    if (interaction.commandName === 'buy-now') {
+        let chosenSymbol = interaction.options.get('symbol')?.value ?? '';
+        let chosenPrice = interaction.options.get('price')?.value ?? '';
+        let chosenAmount = interaction.options.get('amount')?.value ?? '';
+
+        console.log(chosenAmount)
+
+        if (chosenAmount > 1000) {
+            interaction.reply('You better not be doing that right now')
+        } else {
+            let msg = `Are you sure you want to buy ${chosenAmount} ${chosenSymbol} for € ${chosenPrice}?`;
+
+            console.log(msg)
+            interaction.reply(msg);
+        }
+      }
+  }
+});
+
+
+// Login to Discord with your app's token
+client.login(process.env.DISCORD_BOT_TOKEN);
 
 /** ROUTES SECTION */ 
 

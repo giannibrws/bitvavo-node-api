@@ -16,3 +16,4 @@ Bitvavo uses a weight based rate limiting system, with an allowed limit of 1000 
 
 https://docs.bitvavo.com/
 https://github.com/bitvavo/node-bitvavo-api
+https://discord.js.org/
