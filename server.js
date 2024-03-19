@@ -147,6 +147,27 @@ app.get('/assets', async (req, res) => {
     }
 })
 
+/**
+ * WEBSOCKET SECTION
+ */
+
+/**
+ * Updated ticker24h objects are sent on this channel once per second. 
+ * A ticker24h object is considered updated if one of the values besides timestamp has changed.
+ */
+// bitvavo.websocket.subscriptionTicker24h('BTC-EUR', (response) => {
+//     // Perform any action
+//     console.log(response)
+// })
+
+/**
+ * Sends an update whenever an event happens which is related to the account. 
+ * These are ‘order’ events (create, update, cancel) or ‘fill’ events (a trade occurred).
+ */
+// bitvavo.websocket.subscriptionAccount('BTC-EUR', (response) => {
+//     console.log(response)
+// })
+
 app.listen(3000, () => {
     console.log('Server is running on port 3000')
     console.log('To navigate directly, go to: http://localhost:3000/')
