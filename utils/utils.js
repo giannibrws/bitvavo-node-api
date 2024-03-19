@@ -7,7 +7,7 @@ module.exports = {
             case 'ticker':
                 tickerData = {
                     'timestamp': Date.now(),
-                    'createdAt': getCurrentDayTime(),
+                    'createdAt': this.getCurrentDayTime(),
                 }
 
                 let data = { ...paramBag, ...tickerData };
@@ -22,16 +22,23 @@ module.exports = {
             default:
                 return '';
         }
+    },
+    getCurrentDayTime(timestamp = null) {
+        let currentDate;
+    
+        // Get the current date and time
+        if (timestamp) {
+            currentDate = new Date(timestamp);
+        } else {
+            currentDate = new Date();
+        }
+    
+        // Format the date and time
+        return currentDate.toISOString().replace(/T/, ' ').replace(/\..+/, '');
     }
 };
 
-function getCurrentDayTime() {
-    // Get the current date and time
-    const currentDate = new Date();
 
-    // Format the date and time
-    return currentDate.toISOString().replace(/T/, ' ').replace(/\..+/, '');
-}
 
 async function getTickerName() {
 }

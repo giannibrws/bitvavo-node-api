@@ -15,6 +15,8 @@ const {
 = require('discord.js');
 
 const ticker = require('./models/tickerModel')
+const order = require('./models/orderModel')
+
 const utils = require('./utils/utils');
 const app = express()
 
@@ -108,14 +110,15 @@ client.on('interactionCreate', async (interaction) => {
         let chosenSymbol = interaction.options.get('symbol')?.value ?? '';
         try {
             let openOrders = await viewOrders(chosenSymbol);
-        
+            let transformedOrders = openOrders.map(orderData => new order(orderData));
+
             // Prettify the JSON data
-            let formattedOrders = JSON.stringify(openOrders, null, 2);
-            
+            let formattedOrders = JSON.stringify(transformedOrders, null, 2);
+
             // Create a message embed to display the formatted JSON
             const embed = new EmbedBuilder()
                 .setTitle('Orders')
-                .setDescription('Here are the orders for ' + chosenSymbol)
+                .setDescription('Here are all the open orders for ' + chosenSymbol)
                 .setColor('#0099ff')
                 .addFields(
                     {
@@ -442,17 +445,23 @@ async function viewOrder(symbol, orderUuid) {
 }
 
 // Define the function to handle order retrieval
-async function viewOrders(symbol) {
+async function viewOrders(symbol, openOnly = true) {
     try {
         if (!symbol) {
             throw new Error('Missing symbol');
         }
 
         const market = symbol.toUpperCase() + "-EUR";
+        let response;
 
-        // @todo implement switch
-        // const response = await bitvavo.getOrders(market, {});
-        const response = await bitvavo.ordersOpen({});
+        // Get only open orders
+        if (openOnly) {
+            const orders = await bitvavo.ordersOpen({});
+            response= orders.filter(order => order.market === market);
+        } else {
+            response = await bitvavo.getOrders(market, {});
+        }
+
         return response;
     } catch (error) {
         return {
