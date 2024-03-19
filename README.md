@@ -4,5 +4,12 @@ A simple node API developed to interact with the dutch crypto exchange platform 
 # Getting started
 
 npm install
+npm install -g nodemon
 
-npm run start
+npm start
+
+
+# Sources
+
+https://docs.bitvavo.com/
+https://github.com/bitvavo/node-bitvavo-api
