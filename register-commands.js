@@ -40,6 +40,38 @@ const commands= [
 
             },
         ]
+    },
+    {
+        name: 'view-orders',
+        description: 'View orders',
+        options: [
+            {
+                name: 'symbol',
+                description: 'Symbol of the coin you want to view',
+                type: ApplicationCommandOptionType.String,
+                choices: [
+                    {
+                        name: 'BTC',
+                        value: 'BTC',
+                    },
+                    {
+                        name: 'VET',
+                        value: 'VET',
+                    },
+                    {
+                        name: 'XRP',
+                        value: 'XRP',
+                    },
+                ],
+                required: true,
+            },
+            {
+                name: 'uuid',
+                description: 'The specific order uuid you want to view',
+                type: ApplicationCommandOptionType.String,
+                required: false,
+            },
+        ]
     }
 ];
 

@@ -10,6 +10,7 @@ const {
     ComponentType, 
     ButtonBuilder,
     ActionRowBuilder,
+    EmbedBuilder,
     ButtonStyle} 
 = require('discord.js');
 
@@ -58,11 +59,7 @@ client.on('messageCreate', message => {
   // Check if the message starts with the prefix '!'
   if (message.content.startsWith('!nexus')) {
     // Send a reply to the message author
-    message.reply('We zijn dr');
-
-    if (message.content.startsWith('!nexus')) {
-        let msg = message.content
-    }
+    message.reply('Hallo');
   }
 });
 
@@ -77,6 +74,7 @@ const noButton = new ButtonBuilder()
 .setCustomId('btn-cancel')
 
 const btnRow = new ActionRowBuilder().addComponents(yesButton, noButton)
+let createOrderParams = {};
 
 // Event listener for when a message is received
 client.on('interactionCreate', async (interaction) => {
@@ -86,6 +84,12 @@ client.on('interactionCreate', async (interaction) => {
         let chosenSymbol = interaction.options.get('symbol')?.value ?? '';
         let chosenPrice = interaction.options.get('price')?.value ?? '';
         let chosenAmount = interaction.options.get('amount')?.value ?? '';
+
+        createOrderParams = {
+            'symbol': chosenSymbol,
+            'price': chosenPrice,
+            'amount': chosenAmount,
+        }
 
         console.log(chosenAmount)
 
@@ -100,12 +104,49 @@ client.on('interactionCreate', async (interaction) => {
                 components: [btnRow]
             });
         }
-      } 
+      } else if (interaction.commandName === 'view-orders') {
+        let chosenSymbol = interaction.options.get('symbol')?.value ?? '';
+        try {
+            let openOrders = await viewOrders(chosenSymbol);
+        
+            // Prettify the JSON data
+            let formattedOrders = JSON.stringify(openOrders, null, 2);
+            
+            // Create a message embed to display the formatted JSON
+            const embed = new EmbedBuilder()
+                .setTitle('Orders')
+                .setDescription('Here are the orders for ' + chosenSymbol)
+                .setColor('#0099ff')
+                .addFields(
+                    {
+                        name: 'Order Data', 
+                        value: '```json\n' + formattedOrders + '\n```',
+                    }
+                ) 
+            
+            // Reply with the message embed
+            await interaction.reply({ embeds: [embed] });
+        } catch (error) {
+            console.error(error);
+            await interaction.reply('Failed to retrieve orders. Please try again later.');
+        }
+      }
+
   }  else if (interaction.isButton()) {
     console.log(interaction)
     if (interaction.customId === 'btn-accept') {
         // Proceed with the buy operation
-        interaction.reply('Making buy request');
+        await interaction.reply('Making buy request');
+
+        try {
+            let res = await createOrder(createOrderParams.symbol, createOrderParams);
+            // If the order creation is successful, send another message
+            await interaction.followUp(JSON.stringify(res));
+        } catch (error) {
+            // Handle errors if the order creation fails
+            console.error(error);
+            await interaction.followUp('Failed to create order. Please try again later.');
+        }
     } else if (interaction.customId === 'btn-cancel') {
         interaction.reply('Buy operation canceled.');
     }
@@ -284,71 +325,9 @@ app.get('/assets', async (req, res) => {
  * @returns {Error} 500 - Internal server error
  */
 app.post('/create-order/:symbol', async (req, res) => {
-    let postData = {};
-
-    if (!req.params.symbol) {
-        return
-    }
-
-    try {
-        const market = req.params.symbol.toUpperCase() + "-EUR";
-
-        if (!req.body.amount) {
-            res.status(500).send('no amount');
-            return; // Halt function execution
-        }
-
-        if (!req.body.action) {
-            res.status(500).send('no action given, options = buy/sell');
-            return; // Halt function execution
-        }
-
-        // https://docs.bitvavo.com/#tag/Trading-endpoints/paths/~1order/post
-        let price = req.body.price;
-
-        // Handle lower priced tickers           
-        if (Number(price) < 1) {
-            price = parseFloat(req.body.price).toFixed(4).toString() // You can use a maximum of five digits for price
-        } else if (Number(price) > 5 && req.body.action === 'buy') {
-            res.status(500).send({
-                'error-message': 'Abort, price too high!',
-                'price': price,
-            });
-            return; // Halt function execution
-        } else {
-            price = parseFloat(req.body.price).toFixed(2).toString()
-        } 
-
-        postData = {
-            amount: req.body.amount,
-            price: price, 
-        }
-
-     // Optional parameters: limit:(amount, price, postOnly), market:(amount, amountQuote, disableMarketProtection),
-        // stopLoss/takeProfit:(amount, amountQuote, disableMarketProtection, triggerType, triggerReference, triggerAmount)
-        // stopLossLimit/takeProfitLimit:(amount, price, postOnly, triggerType, triggerReference, triggerAmount)
-        //  all orderTypes: timeInForce, selfTradePrevention, responseRequired, clientOrderId
-
-        let response = await bitvavo.placeOrder(market, req.body.action, 'limit', postData)
-        console.log(response)
-
-        res.json(response);
-    } catch (error) {
-        console.log(error)
-
-        getMininimalQuoteOrderValue(req.params.symbol.toUpperCase())
-        .then(minValue => {
-            console.log(minValue);
-    
-            res.status(500).send({
-                'error-message': "Error fetching market data " + error,
-                'symbol': req.params.symbol,
-                'request-body': postData,
-                'amountQuotes': minValue
-            });
-        })
-    }
-})
+    const response = await createOrder(req.params.symbol, req.body);
+    res.json(response);
+});
 
 /**
  * Retrieves order information for a specific symbol and order UUID.
@@ -362,26 +341,8 @@ app.post('/create-order/:symbol', async (req, res) => {
  * @returns {object} 500 - An error message if there was an issue retrieving the order details.
  */
 app.get('/get-order/:symbol/:orderUuid', async (req, res) => {
-    let postData = {};
-
-    if (!req.params.symbol) {
-        return
-    }
-
-    try {
-        const market = req.params.symbol.toUpperCase() + "-EUR";
-        let response = await bitvavo.getOrder(market, req.params.orderUuid)
-        console.log(response)
-
-        res.json(response);
-    } catch (error) {
-        console.log(error)
-        res.status(500).send({
-            'error-message': "Error retrieving order " + error,
-            'symbol': req.params.symbol,
-            'request-body': postData,
-        });
-    }
+    const response = await viewOrder(req.params.symbol, req.params.orderUuid);
+    res.json(response);
 })
 
 /**
@@ -399,6 +360,106 @@ function getMininimalQuoteOrderValue(symbol) {
             console.error(error);
             return response.error;
         });
+}
+
+/**
+ * Create an open order on the Bitvavo platform
+ * 
+ * @param {String} symbol 
+ * @param {JSON} body (request params)
+ * @returns {JSON}
+ */
+async function createOrder(symbol, body) {
+    symbol = symbol.toUpperCase();
+    let postData = {};
+
+    try {
+        if (!symbol) {
+            throw new Error('Missing symbol');
+        }
+
+        const market = symbol + "-EUR";
+
+        if (!body.amount) {
+            throw new Error('No amount specified');
+        }
+
+        if (!body.action) {
+            throw new Error('No action specified, options are buy/sell');
+        }
+
+        // Handle lower priced tickers           
+        let price = body.price;
+
+        if (Number(price) < 1) {
+            price = parseFloat(body.price).toFixed(4).toString(); // Use a maximum of five digits for price
+        } else if (Number(price) > 5 && body.action === 'buy') {
+            throw new Error('Abort, price too high!');
+        } else {
+            price = parseFloat(body.price).toFixed(2).toString();
+        }
+
+        postData = {
+            amount: body.amount,
+            price: price, 
+        };
+
+        // Optional parameters: limit:(amount, price, postOnly), market:(amount, amountQuote, disableMarketProtection),
+        // stopLoss/takeProfit:(amount, amountQuote, disableMarketProtection, triggerType, triggerReference, triggerAmount)
+        // stopLossLimit/takeProfitLimit:(amount, price, postOnly, triggerType, triggerReference, triggerAmount)
+        // all orderTypes: timeInForce, selfTradePrevention, responseRequired, clientOrderId
+
+        return await bitvavo.placeOrder(market, body.action, 'limit', postData);
+    } catch (error) {
+        const minValue = await getMininimalQuoteOrderValue(symbol);
+
+        return {
+            'error-message': "Error fetching market data. " + error,
+            'symbol': symbol,
+            'request-body': body,
+            'amountQuotes': minValue
+        };
+    }
+}
+
+// Define the function to handle order retrieval
+async function viewOrder(symbol, orderUuid) {
+    try {
+        if (!symbol) {
+            throw new Error('Missing symbol');
+        }
+
+        const market = symbol.toUpperCase() + "-EUR";
+        const response = await bitvavo.getOrder(market, orderUuid);
+        return response;
+    } catch (error) {
+        return {
+            'error-message': "Error retrieving order " + error,
+            'symbol': symbol,
+            'orderUuid': orderUuid
+        };
+    }
+}
+
+// Define the function to handle order retrieval
+async function viewOrders(symbol) {
+    try {
+        if (!symbol) {
+            throw new Error('Missing symbol');
+        }
+
+        const market = symbol.toUpperCase() + "-EUR";
+
+        // @todo implement switch
+        // const response = await bitvavo.getOrders(market, {});
+        const response = await bitvavo.ordersOpen({});
+        return response;
+    } catch (error) {
+        return {
+            'error-message': "Error retrieving order " + error,
+            'symbol': symbol,
+        };
+    }
 }
 
 app.listen(3000, () => {
