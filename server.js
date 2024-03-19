@@ -2,7 +2,16 @@ require("dotenv").config();
 
 const express = require('express')
 const axios = require('axios');
-const { Client, GatewayIntentBits } = require('discord.js');
+const { 
+    Client, 
+    GatewayIntentBits, 
+    MessageActionRow,
+    MessageButton, 
+    ComponentType, 
+    ButtonBuilder,
+    ActionRowBuilder,
+    ButtonStyle} 
+= require('discord.js');
 
 const ticker = require('./models/tickerModel')
 const utils = require('./utils/utils');
@@ -57,6 +66,18 @@ client.on('messageCreate', message => {
   }
 });
 
+const yesButton = new ButtonBuilder()
+.setLabel('Yes')
+.setStyle(ButtonStyle.Primary)
+.setCustomId('btn-accept')
+
+const noButton = new ButtonBuilder()
+.setLabel('No')
+.setStyle(ButtonStyle.Secondary)
+.setCustomId('btn-cancel')
+
+const btnRow = new ActionRowBuilder().addComponents(yesButton, noButton)
+
 // Event listener for when a message is received
 client.on('interactionCreate', async (interaction) => {
   // Ignore messages from the bot itself
@@ -74,12 +95,22 @@ client.on('interactionCreate', async (interaction) => {
             let msg = `Are you sure you want to buy ${chosenAmount} ${chosenSymbol} for € ${chosenPrice}?`;
 
             console.log(msg)
-            interaction.reply(msg);
+            reply = interaction.reply({
+                content: msg,
+                components: [btnRow]
+            });
         }
-      }
-  }
+      } 
+  }  else if (interaction.isButton()) {
+    console.log(interaction)
+    if (interaction.customId === 'btn-accept') {
+        // Proceed with the buy operation
+        interaction.reply('Making buy request');
+    } else if (interaction.customId === 'btn-cancel') {
+        interaction.reply('Buy operation canceled.');
+    }
+}
 });
-
 
 // Login to Discord with your app's token
 client.login(process.env.DISCORD_BOT_TOKEN);

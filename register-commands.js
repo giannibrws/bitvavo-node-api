@@ -10,16 +10,34 @@ const commands= [
                 name: 'symbol',
                 description: 'Symbol of the coin you want to buy',
                 type: ApplicationCommandOptionType.String,
+                choices: [
+                    {
+                        name: 'BTC',
+                        value: 'BTC',
+                    },
+                    {
+                        name: 'VET',
+                        value: 'VET',
+                    },
+                    {
+                        name: 'XRP',
+                        value: 'XRP',
+                    },
+                ],
+                required: true,
             },
             {
                 name: 'price',
                 description: 'Price of the coin you want to buy',
                 type: ApplicationCommandOptionType.Number,
+                required: true,
             },
             {
                 name: 'amount',
                 description: 'Amount of coins you want to buy',
                 type: ApplicationCommandOptionType.Number,
+                required: true,
+
             },
         ]
     }
