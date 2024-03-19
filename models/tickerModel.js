@@ -7,6 +7,20 @@ class Ticker {
         this.market = params.market;
         this.createdAt = params.createdAt;
         this.timestamp = params.timestamp;
+        this.volume = params.volume;
+    }
+
+    // Function to format ticker data (To-do)
+    format(params) {
+        return {
+            name: this.name,
+            symbol: this.symbol,
+            price: params.last,
+            quantity: this.quantity,
+            market: this.market,
+            createdAt: this.createdAt,
+            timestamp: this.timestamp
+        };
     }
 }
 

@@ -3,7 +3,6 @@ require("dotenv").config();
 const express = require('express')
 const ticker = require('./models/tickerModel')
 const utils = require('./utils/utils');
-
 const app = express()
 
 // Bitvavo config
@@ -16,7 +15,16 @@ const bitvavo = require('bitvavo')().options({
     DEBUGGING: false
 })
 
-// Routes
+/** ROUTES SECTION */ 
+
+/**
+ * Root Route
+ *
+ * Displays a message indicating that the Node API is ready.
+ *
+ * @route GET /
+ * @returns {string} 200 - A message indicating that the Node API is ready
+ */
 app.get('/', (req, res) => {
     res.send('Hello node api is ready')
     let limitRemaining = bitvavo.getRemainingLimit();
@@ -24,13 +32,23 @@ app.get('/', (req, res) => {
     console.log(bitvavo.time());
 })
 
+/**
+ * Get Market Data for a Symbol
+ *
+ * Retrieves market data for a specified symbol.
+ *
+ * @route GET /markets/:symbol
+ * @param {string} :symbol.path.required - The symbol for which market data is to be retrieved
+ * @returns {object} 200 - Market data for the specified symbol
+ * @returns {Error} 500 - Internal server error
+ */
 app.get('/markets/:symbol', async (req, res) => {
     let body = {};
 
     try {
         if (req.params.symbol) {
             body = {
-                "market": req.params.symbol + "-EUR",
+                "market": req.params.symbol.toUpperCase() + "-EUR",
             }
         }
 
@@ -44,55 +62,62 @@ app.get('/markets/:symbol', async (req, res) => {
     }
 })
 
+/**
+ * Get Ticker Price for a Symbol
+ *
+ * Retrieves the ticker price for a specified symbol.
+ *
+ * @route GET /ticker/:symbol
+ * @param {string} :symbol.path.required - The symbol for which ticker price is to be retrieved
+ * @returns {object} 200 - Ticker price for the specified symbol
+ * @returns {Error} 500 - Internal server error
+ */
 app.get('/ticker/:symbol', async (req, res) => {
     let body = {};
 
     try {
         if (req.params.symbol) {
             body = {
-                "market": req.params.symbol + "-EUR",
+                "market": req.params.symbol.toUpperCase() + "-EUR",
             }
         }
 
         let response = await bitvavo.tickerPrice(body)
-
+        const responseData = {...body, ... response}
         console.log(response)
 
-        b2 = {
-            'symbol': req.params.symbol,
-            'market': response.market,
-            'price': response.price,
-        }
-
-        let m = utils.formatDtoModels('ticker', b2);
-        console.log(m)
-
-        res.json(response);
+        let formattedResponse = utils.formatDtoModels('ticker', responseData);
+        res.json(formattedResponse);
     } catch (error) {
         console.log(error)
         res.status(500).send('Error fetching market data ' + error + ' given symbol: ' + req.params.symbol);
     }
 })
 
+/**
+ * Get Ticker Price for a Symbol (24-hour)
+ *
+ * Retrieves the 24-hour ticker price for a specified symbol.
+ *
+ * @route GET /ticker24/:symbol
+ * @param {string} :symbol.path.required - The symbol for which 24-hour ticker price is to be retrieved
+ * @returns {object} 200 - 24-hour ticker price for the specified symbol
+ * @returns {Error} 500 - Internal server error
+ */
 app.get('/ticker24/:symbol', async (req, res) => {
     let body = {};
 
     try {
         if (req.params.symbol) {
             body = {
-                "market": req.params.symbol + "-EUR",
+                "market": req.params.symbol.toUpperCase() + "-EUR",
             }
         }
 
-        let response = await bitvavo.tickerPrice(body)
+        let response = await bitvavo.ticker24h(body)
+        const responseData = {...body, ... response}
 
-        b2 = {
-            'symbol': req.params.symbol,
-            'market': response.market,
-            'price': response.price,
-        }
-
-        let m = utils.formatDtoModels('ticker', b2);
+        let m = utils.formatDtoModels('ticker', responseData);
         console.log(m)
 
         res.json(response);

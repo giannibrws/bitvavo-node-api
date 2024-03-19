@@ -5,20 +5,23 @@ module.exports = {
     formatDtoModels(type, paramBag) {
         switch (type) {
             case 'ticker':
-                b2 = {
+                tickerData = {
                     'timestamp': Date.now(),
                     'createdAt': getCurrentDayTime(),
                 }
 
-                let data = { ...paramBag, ...b2 };
-                return new ticker(data);
+                let data = { ...paramBag, ...tickerData };
+                let t =  new ticker(data);
+                
+                if (!t.symbol) {
+                    t.symbol = t.market.split('-')[0];
+                    t.name = t.symbol;
+                }  
+
+                return t;
             default:
                 return '';
         }
-    },
-
-    subtract(a, b) {
-        return a - b;
     }
 };
 
