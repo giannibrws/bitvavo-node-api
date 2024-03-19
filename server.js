@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const express = require('express')
 const ticker = require('./models/tickerModel')
+const utils = require('./utils/utils');
 
 const app = express()
 
@@ -23,26 +24,17 @@ app.get('/', (req, res) => {
     console.log(bitvavo.time());
 })
 
-app.get('/markets', async (req, res) => {
-    try {
-        let response = await bitvavo.markets()
-        console.log(response)
-
-        res.json(response);
-    } catch (error) {
-        console.log(error)
-        res.status(500).send('Error fetching market data');
-    }
-})
-
-
 app.get('/markets/:symbol', async (req, res) => {
+    let body = {};
+
     try {
-        const b = {
-            "market": req.params.symbol + "-EUR",
+        if (req.params.symbol) {
+            body = {
+                "market": req.params.symbol + "-EUR",
+            }
         }
 
-        let response = await bitvavo.markets(b)
+        let response = await bitvavo.markets(body)
         console.log(req.params.symbol)
 
         res.json(response);
@@ -52,9 +44,28 @@ app.get('/markets/:symbol', async (req, res) => {
     }
 })
 
-app.get('/ticker', async (req, res) => {
+app.get('/ticker/:symbol', async (req, res) => {
+    let body = {};
+
     try {
-        let response = await bitvavo.tickerPrice({})
+        if (req.params.symbol) {
+            body = {
+                "market": req.params.symbol + "-EUR",
+            }
+        }
+
+        let response = await bitvavo.tickerPrice(body)
+
+        console.log(response)
+
+        b2 = {
+            'symbol': req.params.symbol,
+            'market': response.market,
+            'price': response.price,
+        }
+
+        let m = utils.formatDtoModels('ticker', b2);
+        console.log(m)
 
         res.json(response);
     } catch (error) {
@@ -63,14 +74,26 @@ app.get('/ticker', async (req, res) => {
     }
 })
 
+app.get('/ticker24/:symbol', async (req, res) => {
+    let body = {};
 
-app.get('/ticker/:symbol', async (req, res) => {
     try {
-        const b = {
-            "market": req.params.symbol + "-EUR",
+        if (req.params.symbol) {
+            body = {
+                "market": req.params.symbol + "-EUR",
+            }
         }
 
-        let response = await bitvavo.tickerPrice(b)
+        let response = await bitvavo.tickerPrice(body)
+
+        b2 = {
+            'symbol': req.params.symbol,
+            'market': response.market,
+            'price': response.price,
+        }
+
+        let m = utils.formatDtoModels('ticker', b2);
+        console.log(m)
 
         res.json(response);
     } catch (error) {
@@ -90,18 +113,7 @@ app.get('/ticker/:symbol', async (req, res) => {
  */
 app.get('/assets', async (req, res) => {
     try {
-        const b = {
-            "market": req.params.symbol + "-EUR",
-        }
-
         let response = await bitvavo.balance()
-
-        let e = new ticker({
-            'symbol': 'BTC',
-            'quantity': '555',
-        });
-
-        console.log(e)
 
         res.json(response);
     } catch (error) {
