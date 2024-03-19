@@ -18,6 +18,7 @@ const ticker = require('./models/tickerModel')
 const order = require('./models/orderModel')
 
 const utils = require('./utils/utils');
+const { error } = require("console");
 const app = express()
 
 // Allow express to parse JSON bodies
@@ -133,6 +134,31 @@ client.on('interactionCreate', async (interaction) => {
             console.error(error);
             await interaction.reply('Failed to retrieve orders. Please try again later.');
         }
+      } else if (interaction.commandName === 'view-portfolio') {
+        try {
+            let assets = await viewAssets();
+
+            // Prettify the JSON data
+            let formattedAssets = JSON.stringify(assets, null, 2);
+            console.log(formattedAssets)
+
+            // Create a message embed to display the formatted JSON
+            const embed = new EmbedBuilder()
+                .setTitle('Your portfolio')
+                .setColor('#ffc000')
+                .addFields(
+                    {
+                        name: 'Asset values', 
+                        value: '```json\n' + formattedAssets + '\n```',
+                    }
+                ) 
+            
+            // Reply with the message embed
+            await interaction.reply({ embeds: [embed] });
+        } catch (error) {
+            console.error(error);
+            await interaction.reply('Failed to retrieve assets. Please try again later.');
+        }
       }
 
   }  else if (interaction.isButton()) {
@@ -217,26 +243,37 @@ app.get('/markets/:symbol', async (req, res) => {
  * @returns {Error} 500 - Internal server error
  */
 app.get('/ticker/:symbol', async (req, res) => {
-    let body = {};
-
     try {
-        if (req.params.symbol) {
-            body = {
-                "market": req.params.symbol.toUpperCase() + "-EUR",
-            }
+        if (!req.params.symbol) {
+            throw error('no symbol')
         }
 
-        let response = await bitvavo.tickerPrice(body)
-        const responseData = {...body, ... response}
-        console.log(response)
-
-        let formattedResponse = utils.formatDtoModels('ticker', responseData);
-        res.json(formattedResponse);
+        let response = await getCurrentMarketPrice(req.params.symbol)
+        res.json(response);
     } catch (error) {
         console.log(error)
         res.status(500).send('Error fetching market data ' + error + ' given symbol: ' + req.params.symbol);
     }
 })
+
+// Function to fetch current market price for a given symbol
+async function getCurrentMarketPrice(symbol) {
+    try {
+      // Prepare the request body
+      const body = {
+        market: symbol.toUpperCase() + '-EUR'
+      };
+  
+      // Fetch ticker price for the symbol from Bitvavo
+      const response = await bitvavo.tickerPrice(body);
+  
+      // Return the last price from the ticker data
+      return parseFloat(response.price);
+    } catch (error) {
+      console.error('Error fetching current market price for symbol:', symbol, error);
+      throw error; // Throw the error for handling at the higher level
+    }
+  }
 
 /**
  * Get Ticker Price for a Symbol (24-hour)
@@ -281,15 +318,52 @@ app.get('/ticker24/:symbol', async (req, res) => {
  * @returns {Error} 500 - Internal server error
  */
 app.get('/assets', async (req, res) => {
-    try {
-        let response = await bitvavo.balance()
-
-        res.json(response);
-    } catch (error) {
-        console.log(error)
-        res.status(500).send('Error fetching market data ' + error + ' given symbol: ' + req.params.symbol);
-    }
+    let response = await viewAssets();
+    res.json(response);
 })
+
+// Define the function to handle asset retrieval
+async function viewAssets() {
+    try {
+        let balance = await bitvavo.balance();
+
+         // Initialize total balance in euros
+        let totalBalanceEuros = 0;
+
+        // Iterate over each asset balance
+        for (const [index, asset] of balance.entries()) {
+            // Dont get price for euros ofc
+            let marketPrice;
+
+            // Fetch current market price for the asset
+            if (asset.symbol === 'EUR') {
+                marketPrice = 1;
+            } else {
+                marketPrice = await getCurrentMarketPrice(asset.symbol);
+            }
+
+            // Calculate value of the asset in euros
+            const assetValueEuros = parseFloat(asset.available) * marketPrice;
+            balance[index].priceInEuros = '€' + assetValueEuros.toFixed(2).toString();
+
+            // Add asset value to total balance in euros
+            totalBalanceEuros += assetValueEuros;
+        }
+
+        // Return the total balance in euros
+        let totalBalance = {
+            'totalBalance': '€' + parseFloat(totalBalanceEuros).toFixed(2).toString(),
+        }
+
+        let newRes = {...balance, totalBalance}
+
+        return newRes; // Return the response from the function
+    } catch (error) {
+        console.log(error);
+        throw new Error('Error fetching asset data: ' + error.message); // Throw a new error with the appropriate message
+    }
+}
+
 
 /**
  * WEBSOCKET SECTION

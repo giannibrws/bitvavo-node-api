@@ -1,5 +1,19 @@
 require("dotenv").config();
 const { REST, Routes, ApplicationCommandOptionType } = require('discord.js');
+const supportedSymbols = [
+    {
+        name: 'BTC',
+        value: 'BTC',
+    },
+    {
+        name: 'VET',
+        value: 'VET',
+    },
+    {
+        name: 'XRP',
+        value: 'XRP',
+    },
+]
 
 const commands= [
     {
@@ -10,20 +24,7 @@ const commands= [
                 name: 'symbol',
                 description: 'Symbol of the coin you want to buy',
                 type: ApplicationCommandOptionType.String,
-                choices: [
-                    {
-                        name: 'BTC',
-                        value: 'BTC',
-                    },
-                    {
-                        name: 'VET',
-                        value: 'VET',
-                    },
-                    {
-                        name: 'XRP',
-                        value: 'XRP',
-                    },
-                ],
+                choices: supportedSymbols,
                 required: true,
             },
             {
@@ -49,20 +50,7 @@ const commands= [
                 name: 'symbol',
                 description: 'Symbol of the coin you want to view',
                 type: ApplicationCommandOptionType.String,
-                choices: [
-                    {
-                        name: 'BTC',
-                        value: 'BTC',
-                    },
-                    {
-                        name: 'VET',
-                        value: 'VET',
-                    },
-                    {
-                        name: 'XRP',
-                        value: 'XRP',
-                    },
-                ],
+                choices: supportedSymbols,
                 required: true,
             },
             {
@@ -72,6 +60,10 @@ const commands= [
                 required: false,
             },
         ]
+    },
+    {
+        name: 'view-portfolio',
+        description: 'View your current portfolio assets',
     }
 ];
 
@@ -94,5 +86,7 @@ const slashRegister = async () => {
         console.log(error)
     }
 }
+
+
 
 slashRegister();
