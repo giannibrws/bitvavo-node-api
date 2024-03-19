@@ -1,6 +1,8 @@
 require("dotenv").config();
 
 const express = require('express')
+const ticker = require('./models/tickerModel')
+
 const app = express()
 
 // Bitvavo config
@@ -77,8 +79,38 @@ app.get('/ticker/:symbol', async (req, res) => {
     }
 })
 
+/**
+ * Get account balances for all assets.
+ * 
+ * Retrieves the current account balances for all assets available on the platform.
+ * 
+ * @route GET /assets
+ * @returns {object} 200 - An object containing account balances for all assets
+ * @returns {Error} 500 - Internal server error
+ */
+app.get('/assets', async (req, res) => {
+    try {
+        const b = {
+            "market": req.params.symbol + "-EUR",
+        }
+
+        let response = await bitvavo.balance()
+
+        let e = new ticker({
+            'symbol': 'BTC',
+            'quantity': '555',
+        });
+
+        console.log(e)
+
+        res.json(response);
+    } catch (error) {
+        console.log(error)
+        res.status(500).send('Error fetching market data ' + error + ' given symbol: ' + req.params.symbol);
+    }
+})
 
 app.listen(3000, () => {
-    console.log('server is running on port 3000')
-    console.log('go to http://localhost:3000/')
+    console.log('Server is running on port 3000')
+    console.log('To navigate directly, go to: http://localhost:3000/')
 })
